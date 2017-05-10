@@ -1,8 +1,39 @@
-module Toasty exposing (Stack, Msg, initialState, update, addToast)
+module Toasty
+    exposing
+        ( Stack
+        , Config
+        , Msg
+        , transitionOutDuration
+        , transitionOutClass
+        , transitionInClass
+        , initialState
+        , addToast
+        , config
+        , update
+        , delay
+        , view
+        )
 
+import Html.Attributes exposing (..)
+import Html.Events exposing (..)
+import Html exposing (..)
 import Process
 import Time
 import Task
+
+
+-- VIEW
+
+
+view : (a -> Html msg) -> Stack a -> Html msg
+view toastView (Stack toasts) =
+    div [ class "container" ] <| List.map (\x -> renderToast x toastView) toasts
+
+
+renderToast : ( Id, a, String ) -> (a -> Html msg) -> Html msg
+renderToast ( id, toast, status ) toastView =
+    div [ class "item", class status ] [ toastView toast ]
+
 
 
 -- MODEL
@@ -22,6 +53,45 @@ type alias Id =
     Int
 
 
+type Config
+    = Config
+        { transitionOutDuration : Float
+        , transitionOutClass : String
+        , transitionInClass : String
+        , delay : Float
+        }
+
+
+config : Config
+config =
+    Config
+        { transitionOutDuration = 700
+        , transitionOutClass = "animated fadeOutRightBig"
+        , transitionInClass = "animated bounceInRight"
+        , delay = 4000
+        }
+
+
+transitionOutDuration : Float -> Config -> Config
+transitionOutDuration time (Config cfg) =
+    Config { cfg | transitionOutDuration = time }
+
+
+transitionInClass : String -> Config -> Config
+transitionInClass className (Config cfg) =
+    Config { cfg | transitionInClass = className }
+
+
+transitionOutClass : String -> Config -> Config
+transitionOutClass className (Config cfg) =
+    Config { cfg | transitionOutClass = className }
+
+
+delay : Float -> Config -> Config
+delay time (Config cfg) =
+    Config { cfg | delay = time }
+
+
 
 -- UPDATE
 
@@ -31,22 +101,25 @@ initialState =
     Stack []
 
 
-update : (m -> Stack a) -> (m -> Stack a -> m) -> (Msg a -> msg) -> Msg a -> m -> ( m, Cmd msg )
-update getter setter tagger msg model =
+update : Config -> (Msg a -> msg) -> Msg a -> { m | toasties : Stack a } -> ( { m | toasties : Stack a }, Cmd msg )
+update config tagger msg model =
     let
+        (Config cfg) =
+            config
+
         (Stack toasts) =
-            getter model
+            model.toasties
     in
         case msg of
             Add toast ->
-                addToast getter setter tagger toast ( model, Cmd.none )
+                addToast config tagger toast ( model, Cmd.none )
 
             Remove targetId ->
                 let
                     newStack =
                         List.filter (\( id, toast, status ) -> id /= targetId) toasts
                 in
-                    setter model (Stack newStack) ! []
+                    { model | toasties = (Stack newStack) } ! []
 
             TransitionOut targetId ->
                 let
@@ -54,33 +127,36 @@ update getter setter tagger msg model =
                         List.map
                             (\( id, toast, status ) ->
                                 if (id == targetId) then
-                                    ( id, toast, "fadeOutRightBig" )
+                                    ( id, toast, cfg.transitionOutClass )
                                 else
                                     ( id, toast, status )
                             )
                             toasts
                 in
-                    setter model (Stack newStack)
-                        ! [ Task.perform (\() -> tagger (Remove targetId)) (Process.sleep <| 700 * Time.millisecond) ]
+                    { model | toasties = Stack newStack }
+                        ! [ Task.perform (\() -> tagger (Remove targetId)) (Process.sleep <| cfg.transitionOutDuration * Time.millisecond) ]
 
 
-addToast : (m -> Stack a) -> (m -> Stack a -> m) -> (Msg a -> msg) -> a -> ( m, Cmd msg ) -> ( m, Cmd msg )
-addToast getter setter tagger toast ( model, cmd ) =
+addToast : Config -> (Msg a -> msg) -> a -> ( { m | toasties : Stack a }, Cmd msg ) -> ( { m | toasties : Stack a }, Cmd msg )
+addToast config tagger toast ( model, cmd ) =
     let
+        (Config cfg) =
+            config
+
         (Stack toasts) =
-            getter model
+            model.toasties
 
         newId =
             getNewId <| Stack toasts
 
         newToast =
-            ( newId, toast, "bounceInRight" )
+            ( newId, toast, cfg.transitionInClass )
 
         newStack =
             toasts ++ [ newToast ]
     in
-        setter model (Stack newStack)
-            ! ([ cmd, Task.perform (\() -> tagger (TransitionOut newId)) (Process.sleep <| 4000 * Time.millisecond) ])
+        { model | toasties = Stack newStack }
+            ! ([ cmd, Task.perform (\() -> tagger (TransitionOut newId)) (Process.sleep <| cfg.delay * Time.millisecond) ])
 
 
 getNewId : Stack a -> Id
