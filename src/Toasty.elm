@@ -1,12 +1,14 @@
 module Toasty
     exposing
-        ( Stack
-        , Config
+        ( Config
+        , Stack
         , Msg
         , transitionOutDuration
-        , transitionOutClass
-        , transitionInClass
+        , transitionOutAttrs
+        , transitionInAttrs
+        , containerAttrs
         , initialState
+        , itemAttrs
         , addToast
         , config
         , update
@@ -15,8 +17,8 @@ module Toasty
         )
 
 import Html.Attributes exposing (..)
-import Html.Events exposing (..)
 import Html exposing (..)
+import Html.Keyed
 import Process
 import Time
 import Task
@@ -25,22 +27,33 @@ import Task
 -- VIEW
 
 
-view : (a -> Html msg) -> Stack a -> Html msg
-view toastView (Stack toasts) =
-    div [ class "container" ] <| List.map (\x -> renderToast x toastView) toasts
+view : Config msg -> (a -> Html msg) -> Stack a msg -> Html msg
+view config userView (Stack toasts) =
+    let
+        (Config cfg) =
+            config
+    in
+        if (List.isEmpty toasts) then
+            text ""
+        else
+            Html.Keyed.ol cfg.containerAttrs <| List.map (\toast -> itemContainer config toast userView) toasts
 
 
-renderToast : ( Id, a, String ) -> (a -> Html msg) -> Html msg
-renderToast ( id, toast, status ) toastView =
-    div [ class "item", class status ] [ toastView toast ]
+itemContainer : Config msg -> ( Id, a, List (Html.Attribute msg) ) -> (a -> Html msg) -> ( String, Html msg )
+itemContainer (Config cfg) ( id, toast, attrs ) toastView =
+    ( toString id
+    , li
+        (cfg.itemAttrs ++ attrs)
+        [ toastView toast ]
+    )
 
 
 
 -- MODEL
 
 
-type Stack a
-    = Stack (List ( Id, a, String ))
+type Stack a msg
+    = Stack (List ( Id, a, List (Html.Attribute msg) ))
 
 
 type Msg a
@@ -53,41 +66,55 @@ type alias Id =
     Int
 
 
-type Config
+type Config msg
     = Config
         { transitionOutDuration : Float
-        , transitionOutClass : String
-        , transitionInClass : String
+        , transitionOutAttrs : List (Html.Attribute msg)
+        , transitionInAttrs : List (Html.Attribute msg)
+        , containerAttrs : List (Html.Attribute msg)
+        , itemAttrs : List (Html.Attribute msg)
         , delay : Float
         }
 
 
-config : Config
+config : Config msg
 config =
     Config
         { transitionOutDuration = 700
-        , transitionOutClass = "animated fadeOutRightBig"
-        , transitionInClass = "animated bounceInRight"
+        , transitionOutAttrs = [ class "animated fadeOutRightBig" ]
+        , transitionInAttrs = [ class "animated bounceInRight" ]
+        , containerAttrs = []
+        , itemAttrs = []
         , delay = 4000
         }
 
 
-transitionOutDuration : Float -> Config -> Config
+transitionOutDuration : Float -> Config msg -> Config msg
 transitionOutDuration time (Config cfg) =
     Config { cfg | transitionOutDuration = time }
 
 
-transitionInClass : String -> Config -> Config
-transitionInClass className (Config cfg) =
-    Config { cfg | transitionInClass = className }
+transitionInAttrs : List (Html.Attribute msg) -> Config msg -> Config msg
+transitionInAttrs attrs (Config cfg) =
+    Config { cfg | transitionInAttrs = attrs }
 
 
-transitionOutClass : String -> Config -> Config
-transitionOutClass className (Config cfg) =
-    Config { cfg | transitionOutClass = className }
+transitionOutAttrs : List (Html.Attribute msg) -> Config msg -> Config msg
+transitionOutAttrs attrs (Config cfg) =
+    Config { cfg | transitionOutAttrs = attrs }
 
 
-delay : Float -> Config -> Config
+containerAttrs : List (Html.Attribute msg) -> Config msg -> Config msg
+containerAttrs attrs (Config cfg) =
+    Config { cfg | containerAttrs = attrs }
+
+
+itemAttrs : List (Html.Attribute msg) -> Config msg -> Config msg
+itemAttrs attrs (Config cfg) =
+    Config { cfg | itemAttrs = attrs }
+
+
+delay : Float -> Config msg -> Config msg
 delay time (Config cfg) =
     Config { cfg | delay = time }
 
@@ -96,12 +123,12 @@ delay time (Config cfg) =
 -- UPDATE
 
 
-initialState : Stack a
+initialState : Stack a msg
 initialState =
     Stack []
 
 
-update : Config -> (Msg a -> msg) -> Msg a -> { m | toasties : Stack a } -> ( { m | toasties : Stack a }, Cmd msg )
+update : Config msg -> (Msg a -> msg) -> Msg a -> { m | toasties : Stack a msg } -> ( { m | toasties : Stack a msg }, Cmd msg )
 update config tagger msg model =
     let
         (Config cfg) =
@@ -127,7 +154,7 @@ update config tagger msg model =
                         List.map
                             (\( id, toast, status ) ->
                                 if (id == targetId) then
-                                    ( id, toast, cfg.transitionOutClass )
+                                    ( id, toast, cfg.transitionOutAttrs )
                                 else
                                     ( id, toast, status )
                             )
@@ -137,7 +164,7 @@ update config tagger msg model =
                         ! [ Task.perform (\() -> tagger (Remove targetId)) (Process.sleep <| cfg.transitionOutDuration * Time.millisecond) ]
 
 
-addToast : Config -> (Msg a -> msg) -> a -> ( { m | toasties : Stack a }, Cmd msg ) -> ( { m | toasties : Stack a }, Cmd msg )
+addToast : Config msg -> (Msg a -> msg) -> a -> ( { m | toasties : Stack a msg }, Cmd msg ) -> ( { m | toasties : Stack a msg }, Cmd msg )
 addToast config tagger toast ( model, cmd ) =
     let
         (Config cfg) =
@@ -150,7 +177,7 @@ addToast config tagger toast ( model, cmd ) =
             getNewId <| Stack toasts
 
         newToast =
-            ( newId, toast, cfg.transitionInClass )
+            ( newId, toast, cfg.transitionInAttrs )
 
         newStack =
             toasts ++ [ newToast ]
@@ -159,7 +186,7 @@ addToast config tagger toast ( model, cmd ) =
             ! ([ cmd, Task.perform (\() -> tagger (TransitionOut newId)) (Process.sleep <| cfg.delay * Time.millisecond) ])
 
 
-getNewId : Stack a -> Id
+getNewId : Stack a msg -> Id
 getNewId (Stack toasts) =
     let
         ids =
