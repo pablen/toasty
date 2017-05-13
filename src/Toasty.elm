@@ -16,7 +16,133 @@ module Toasty
         , view
         )
 
-import Html.Attributes exposing (..)
+{-| This package lets you easily show customizable toast notifications in your
+Elm apps following The Elm Architecture. You will be able to trigger toasts as
+a side-effect of model updates by piping your update function return value
+through this library `addToast` function.
+
+While this package lets you configure each part of the rendering and behaviour
+of the notification stack, you can use the nice default theme configuration in `Toasty.Defaults`.
+
+
+## Example
+
+### Setting things up
+
+To use the package, let's look at an example that shows a simple text notification.
+
+First you add the toast stack to your model, wrapping the toast model you want in `Stack`.
+You must do it in a field called `toasties`:
+
+``` elm
+type alias Model =
+    { toasties : Toasty.Stack String }
+```
+
+Add the stack initial state in your `init` function:
+
+```elm
+init : ( Model, Cmd Msg)
+init =
+    ( { toasties = Toasty.initialState } , Cmd.none )
+```
+
+Then add in a message that will handle toasts messages:
+
+```elm
+type alias Msg
+    = ToastyMsg (Toasty.Msg String)
+```
+
+You can use the default configuration as-is or tweak it to your needs by piping configuration helpers:
+
+```elm
+-- Create a custom configuration to make toasts visible for 8 seconds.
+myConfig : Toasty.Config msg
+myConfig =
+    Toasty.config
+        |> Toasty.transitionOutDuration 100
+        |> Toasty.delay 8000
+```
+
+Handle the toasts message in your app update function using the library `update`
+function:
+
+```elm
+update msg model =
+    case msg of
+        ToastyMsg subMsg ->
+            Toasty.update myConfig ToastyMsg subMsg model
+```
+
+As a last step, render the toast stack in you `view` function. You will need to
+provide an special view function that knows how to render your toast model:
+
+```elm
+view : Model -> Html Msg
+view model =
+    div []
+        [ h1 [] [ text "Toasty example" ]
+        , Toasty.view myConfig renderToast ToastyMsg model.toasties
+        ]
+
+renderToast : String -> Html Msg
+renderToast toast =
+    div [] [ text toast ]
+```
+
+### Triggering toasts
+Most of the times you will want to trigger toasts as side-effect of some other app event,
+e.g. show a message when an asynchronous response was received. In order to do that, just
+pipe your update function returned value through the `addToast` function passing your
+configuration, tag and toast.
+
+```elm
+    update msg model =
+        case msg of
+            SomeAppMsg ->
+                ( newModel, Cmd.none )
+                    |> Toasty.addToast myConfig ToastyMsg "Entity successfully created!"
+```
+
+That's all!
+
+# Definition
+@docs Stack, Msg
+
+# Configuration
+The notifications appearance and behaviour can be fully customized. To do this,
+you need to import the default configuration and tweak it by piping the provided
+helper functions.
+
+Note that as you can set container and items HTML attributes the library remains
+agnostic about how to style your toasts, enabling you to use inline styles or
+classes.
+
+```elm
+myConfig : Toasty.Config msg
+myConfig =
+    Toasty.config
+        |> Toasty.transitionOutDuration 700
+        |> Toasty.delay 8000
+        |> Toasty.containerAttrs containerAttrs
+
+containerAttrs =
+    [ style
+        [ ( "max-width", "300px" )
+        , ( "position", "fixed" )
+        , ( "right", "0" )
+        , ( "top", "0" )
+        ]
+    ]
+```
+@docs config, delay, transitionOutDuration, containerAttrs, itemAttrs, transitionInAttrs, transitionOutAttrs, Config
+
+# Other functions
+@docs view, update, addToast, initialState
+-}
+
+import Html.Events exposing (..)
 import Html exposing (..)
 import Html.Keyed
 import Process
@@ -24,48 +150,36 @@ import Time
 import Task
 
 
--- VIEW
+{-| Represents the stack of current toasts notifications. You can model a toast
+to be as complex or simple as you want.
+
+    type alias Model =
+        { toasties : Toasty.Stack MyToast
+        }
+
+    -- Defines a toast model that has three different variants
+    type MyToast
+        = Success String
+        | Warning String
+        | Error String String
+-}
+type Stack a
+    = Stack (List ( Id, Status, a ))
 
 
-view : Config msg -> (a -> Html msg) -> Stack a msg -> Html msg
-view config userView (Stack toasts) =
-    let
-        (Config cfg) =
-            config
-    in
-        if (List.isEmpty toasts) then
-            text ""
-        else
-            Html.Keyed.ol cfg.containerAttrs <| List.map (\toast -> itemContainer config toast userView) toasts
+{-| The internal message type used by the library. You need to tag and add it to your app messages.
 
-
-itemContainer : Config msg -> ( Id, a, List (Html.Attribute msg) ) -> (a -> Html msg) -> ( String, Html msg )
-itemContainer (Config cfg) ( id, toast, attrs ) toastView =
-    ( toString id
-    , li
-        (cfg.itemAttrs ++ attrs)
-        [ toastView toast ]
-    )
-
-
-
--- MODEL
-
-
-type Stack a msg
-    = Stack (List ( Id, a, List (Html.Attribute msg) ))
-
-
+    type Msg
+        = ToastyMsg (Toasty.Msg MyToast)
+-}
 type Msg a
     = Add a
     | Remove Id
     | TransitionOut Id
 
 
-type alias Id =
-    Int
-
-
+{-| The base configuration type.
+-}
 type Config msg
     = Config
         { transitionOutDuration : Float
@@ -77,58 +191,91 @@ type Config msg
         }
 
 
+type alias Id =
+    Int
+
+
+type Status
+    = Entered
+    | Leaving
+
+
+{-| Some basic configuration defaults: Toasts are visible for 5 seconds with
+no animations or special styling.
+-}
 config : Config msg
 config =
     Config
-        { transitionOutDuration = 700
-        , transitionOutAttrs = [ class "animated fadeOutRightBig" ]
-        , transitionInAttrs = [ class "animated bounceInRight" ]
+        { transitionOutDuration = 0
+        , transitionOutAttrs = []
+        , transitionInAttrs = []
         , containerAttrs = []
         , itemAttrs = []
-        , delay = 4000
+        , delay = 5000
         }
 
 
+{-| Changes the amount of time (in milliseconds) to wait after transition out
+begins and before actually removing the toast node from the DOM. This lets you
+author fancy animations when a toast is removed.
+-}
 transitionOutDuration : Float -> Config msg -> Config msg
 transitionOutDuration time (Config cfg) =
     Config { cfg | transitionOutDuration = time }
 
 
+{-| Lets you set the HTML attributes to add to the toast container when transitioning in.
+-}
 transitionInAttrs : List (Html.Attribute msg) -> Config msg -> Config msg
 transitionInAttrs attrs (Config cfg) =
     Config { cfg | transitionInAttrs = attrs }
 
 
+{-| Lets you set the HTML attributes to add to the toast container when transitioning out.
+-}
 transitionOutAttrs : List (Html.Attribute msg) -> Config msg -> Config msg
 transitionOutAttrs attrs (Config cfg) =
     Config { cfg | transitionOutAttrs = attrs }
 
 
+{-| Lets you set the HTML attributes to add to the toasts stack container. This will help
+you style and position the toast stack however you like by adding classes or inline styles.
+-}
 containerAttrs : List (Html.Attribute msg) -> Config msg -> Config msg
 containerAttrs attrs (Config cfg) =
     Config { cfg | containerAttrs = attrs }
 
 
+{-| Lets you set the HTML attributes to add to each toast container. This will help
+you style and arrange the toasts however you like by adding classes or inline styles.
+-}
 itemAttrs : List (Html.Attribute msg) -> Config msg -> Config msg
 itemAttrs attrs (Config cfg) =
     Config { cfg | itemAttrs = attrs }
 
 
+{-| Changes the amount of time (in milliseconds) the toast will be visible.
+After this time, the transition out begins.
+-}
 delay : Float -> Config msg -> Config msg
 delay time (Config cfg) =
     Config { cfg | delay = time }
 
 
-
--- UPDATE
-
-
-initialState : Stack a msg
+{-| An empty stack of toasts to initialize your model with.
+-}
+initialState : Stack a
 initialState =
     Stack []
 
 
-update : Config msg -> (Msg a -> msg) -> Msg a -> { m | toasties : Stack a msg } -> ( { m | toasties : Stack a msg }, Cmd msg )
+{-| Handles the internal messages. You need to wire it to your app update function
+    update msg model =
+        case msg of
+            ToastyMsg subMsg ->
+                Toasty.update Toasty.config ToastyMsg subMsg model
+-}
+update : Config msg -> (Msg a -> msg) -> Msg a -> { m | toasties : Stack a } -> ( { m | toasties : Stack a }, Cmd msg )
 update config tagger msg model =
     let
         (Config cfg) =
@@ -152,19 +299,30 @@ update config tagger msg model =
                 let
                     newStack =
                         List.map
-                            (\( id, toast, status ) ->
+                            (\( id, status, toast ) ->
                                 if (id == targetId) then
-                                    ( id, toast, cfg.transitionOutAttrs )
+                                    ( id, Leaving, toast )
                                 else
-                                    ( id, toast, status )
+                                    ( id, status, toast )
                             )
                             toasts
                 in
                     { model | toasties = Stack newStack }
-                        ! [ Task.perform (\() -> tagger (Remove targetId)) (Process.sleep <| cfg.transitionOutDuration * Time.millisecond) ]
+                        ! [ Task.perform (\_ -> tagger (Remove targetId)) (Process.sleep <| cfg.transitionOutDuration * Time.millisecond) ]
 
 
-addToast : Config msg -> (Msg a -> msg) -> a -> ( { m | toasties : Stack a msg }, Cmd msg ) -> ( { m | toasties : Stack a msg }, Cmd msg )
+{-| Adds a toast to the stack and schedules its removal. It receives and returns
+a tuple of type '(model, Cmd msg)' so that you can easily pipe it to your app
+update function branches.
+    update msg model =
+        case msg of
+            SomeAppMsg ->
+                ( newModel, Cmd.none )
+                    |> Toasty.addToast myConfig ToastyMsg (MyToast "Entity successfully created!")
+            ToastyMsg subMsg ->
+                Toasty.update myConfig ToastyMsg subMsg model
+-}
+addToast : Config msg -> (Msg a -> msg) -> a -> ( { m | toasties : Stack a }, Cmd msg ) -> ( { m | toasties : Stack a }, Cmd msg )
 addToast config tagger toast ( model, cmd ) =
     let
         (Config cfg) =
@@ -175,22 +333,36 @@ addToast config tagger toast ( model, cmd ) =
 
         newId =
             getNewId <| Stack toasts
-
-        newToast =
-            ( newId, toast, cfg.transitionInAttrs )
-
-        newStack =
-            toasts ++ [ newToast ]
     in
-        { model | toasties = Stack newStack }
+        { model | toasties = Stack <| toasts ++ [ ( newId, Entered, toast ) ] }
             ! ([ cmd, Task.perform (\() -> tagger (TransitionOut newId)) (Process.sleep <| cfg.delay * Time.millisecond) ])
 
 
-getNewId : Stack a msg -> Id
+{-| Renders the stack of toasts. You need to add it to your app view function and
+give it a function that knows how to render your toasts model.
+    view model =
+        div []
+            [ h1 [] [ text "Toasty example" ]
+            , Toasty.view myConfig (\txt -> div [] [text txt]) ToastyMsg model.toasties
+            ]
+-}
+view : Config msg -> (a -> Html msg) -> (Msg a -> msg) -> Stack a -> Html msg
+view config toastView tagger (Stack toasts) =
+    let
+        (Config cfg) =
+            config
+    in
+        if (List.isEmpty toasts) then
+            text ""
+        else
+            Html.Keyed.ol cfg.containerAttrs <| List.map (\toast -> itemContainer config tagger toast toastView) toasts
+
+
+getNewId : Stack a -> Id
 getNewId (Stack toasts) =
     let
         ids =
-            List.map (\( id, toast, status ) -> id) toasts
+            List.map (\( id, _, _ ) -> id) toasts
 
         getNext index list =
             if (List.member index list) then
@@ -199,3 +371,17 @@ getNewId (Stack toasts) =
                 index
     in
         getNext 0 ids
+
+
+itemContainer : Config msg -> (Msg a -> msg) -> ( Id, Status, a ) -> (a -> Html msg) -> ( String, Html msg )
+itemContainer (Config cfg) tagger ( id, status, toast ) toastView =
+    let
+        attrs =
+            case status of
+                Entered ->
+                    cfg.transitionInAttrs
+
+                Leaving ->
+                    cfg.transitionOutAttrs
+    in
+        ( toString id, li (cfg.itemAttrs ++ attrs ++ [ onClick (tagger <| TransitionOut id) ]) [ toastView toast ] )
