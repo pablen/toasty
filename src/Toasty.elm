@@ -270,6 +270,7 @@ initialState =
 
 
 {-| Handles the internal messages. You need to wire it to your app update function
+
     update msg model =
         case msg of
             ToastyMsg subMsg ->
@@ -314,6 +315,7 @@ update config tagger msg model =
 {-| Adds a toast to the stack and schedules its removal. It receives and returns
 a tuple of type '(model, Cmd msg)' so that you can easily pipe it to your app
 update function branches.
+
     update msg model =
         case msg of
             SomeAppMsg ->
@@ -340,6 +342,7 @@ addToast config tagger toast ( model, cmd ) =
 
 {-| Renders the stack of toasts. You need to add it to your app view function and
 give it a function that knows how to render your toasts model.
+
     view model =
         div []
             [ h1 [] [ text "Toasty example" ]
