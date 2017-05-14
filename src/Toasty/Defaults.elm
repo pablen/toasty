@@ -5,9 +5,14 @@ module Toasty.Defaults
         , view
         )
 
-{-| This package lets you easily show customizable toast notifications in your Elm apps. You
-will be able to trigger toasts as a side-effect of model updates by piping your update function
-return value through this library 'addToast' function.
+{-| This module provides a generic toast type with three variants (success, error and warning)
+each one supports a title and optional secondary message.
+
+**You need to load the provided `Defaults.css` file in your project**. `bounceInRight`
+and `fadeOutRightBig` animations borrowed from [Animate.css](https://daneden.github.io/animate.css/)
+project by Daniel Eden.
+
+See a [demo](http://pablen-toasty-demo.surge.sh/).
 
 # Definition
 @docs Toast, config, view

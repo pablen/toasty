@@ -2,6 +2,8 @@
 
 A configurable toast notification package for Elm apps following The Elm Architecture.
 
+See a [demo](http://pablen-toasty-demo.surge.sh/) using `Toasty.Defaults` styling.
+
 
 ## Installation
 
@@ -14,14 +16,6 @@ $ elm package install pablen/toasty
 ## Documentation
 
 [See the Elm package for full usage docs](http://package.elm-lang.org/packages/pablen/toasty/latest).
-
-## Building & Testing
-
-```
-make
-```
-
-...will run the whole build and test suite.
 
 ## License
 
