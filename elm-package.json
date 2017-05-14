@@ -1,5 +1,5 @@
 {
-    "version": "1.0.0",
+    "version": "1.0.1",
     "summary": "A configurable toast notification package for Elm apps.",
     "repository": "https://github.com/pablen/toasty.git",
     "license": "BSD3",
@@ -7,7 +7,10 @@
         ".",
         "src/"
     ],
-    "exposed-modules": ["Toasty", "Toasty.Defaults"],
+    "exposed-modules": [
+        "Toasty",
+        "Toasty.Defaults"
+    ],
     "dependencies": {
         "elm-lang/core": "5.0.0 <= v < 6.0.0",
         "elm-lang/html": "2.0.0 <= v < 3.0.0"
