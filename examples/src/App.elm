@@ -73,6 +73,7 @@ view : Model -> Html Msg
 view model =
     div []
         [ h1 [] [ text "Toasty demo" ]
+        , div [] [ text (toString model.toasties) ]
         , p []
             [ text "Press "
             , kbd [] [ text "[s]" ]
