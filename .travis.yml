@@ -3,5 +3,6 @@ install:
   - npm install -g elm elm-test
   - elm-package install -y
 before_script: 
-  - elm-make --yes --output raw-test.js tests/Tests.elm
+  - cd tests
+  - elm-make Tests.elm --yes --output raw-test.js
 script: node raw-test.js
