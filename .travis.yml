@@ -51,4 +51,5 @@ script:
   - cd ..
   - cd tests
   - elm-make Tests.elm --yes --output raw-test.js
+  - cd ..
   - elm-test
