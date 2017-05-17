@@ -40,7 +40,6 @@ install:
   - chmod +x $(npm config get prefix)/bin/elm-make
   - travis_retry elm-package install --yes
   - cd tests
-  - npm install
   - travis_retry elm-package install --yes
   - cd ..
 
