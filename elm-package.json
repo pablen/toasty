@@ -1,5 +1,5 @@
 {
-    "version": "1.0.3",
+    "version": "1.0.4",
     "summary": "A configurable toast notification package for Elm apps.",
     "repository": "https://github.com/pablen/toasty.git",
     "license": "BSD3",
