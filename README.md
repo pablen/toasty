@@ -1,5 +1,7 @@
 # Toast notifications for Elm apps
 
+[![Build Status](https://travis-ci.org/pablen/toasty.svg?branch=master)](https://travis-ci.org/pablen/toasty)
+
 A configurable toast notification package for Elm apps following The Elm Architecture.
 
 See a [demo](http://pablen-toasty-demo.surge.sh/) using `Toasty.Defaults` styling.
