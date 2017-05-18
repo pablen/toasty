@@ -1,9 +1,10 @@
 module Config exposing (all)
 
+import Test.Html.Selector as Selector
+import Test.Html.Query as Query
 import Html.Attributes exposing (..)
 import Html exposing (..)
 import Test exposing (..)
-import Html.Keyed
 import Expect
 import Toasty
 
@@ -47,12 +48,13 @@ all =
                     view =
                         Toasty.view Toasty.config renderToast Tagger model.toasties
                 in
-                    Expect.equal view
-                        (Html.Keyed.ol []
-                            [ ( "0", li [] [ div [] [ text "foo" ] ] )
-                            , ( "1", li [] [ div [] [ text "bar" ] ] )
+                    view
+                        |> Query.fromHtml
+                        |> Query.findAll [ Selector.tag "li" ]
+                        |> Expect.all
+                            [ Query.index 0 >> Query.has [ Selector.text "foo" ]
+                            , Query.index 1 >> Query.has [ Selector.text "bar" ]
                             ]
-                        )
         , test "Can add custom attributes to list container" <|
             \() ->
                 let
@@ -67,11 +69,10 @@ all =
                     view =
                         Toasty.view myConfig renderToast Tagger model.toasties
                 in
-                    Expect.equal view
-                        (Html.Keyed.ol [ class "myClass", style [ ( "color", "red" ) ] ]
-                            [ ( "0", li [] [ div [] [ text "foo" ] ] )
-                            ]
-                        )
+                    -- elm-test can't test style attributess ATM https://github.com/eeue56/elm-html-test/issues/3
+                    view
+                        |> Query.fromHtml
+                        |> Query.has [ Selector.className "myClass" ]
         , test "Can add custom attributes to toast container" <|
             \() ->
                 let
@@ -86,11 +87,11 @@ all =
                     view =
                         Toasty.view myConfig renderToast Tagger model.toasties
                 in
-                    Expect.equal view
-                        (Html.Keyed.ol []
-                            [ ( "0", li [ class "itemClass", style [ ( "color", "blue" ) ] ] [ div [] [ text "foo" ] ] )
-                            ]
-                        )
+                    -- elm-test can't test style attributess ATM https://github.com/eeue56/elm-html-test/issues/3
+                    view
+                        |> Query.fromHtml
+                        |> Query.findAll [ Selector.tag "li" ]
+                        |> Query.each (Query.has [ Selector.className "itemClass" ])
         , test "Can add custom attributes to toast container when transitioning in" <|
             \() ->
                 let
@@ -105,9 +106,9 @@ all =
                     view =
                         Toasty.view myConfig renderToast Tagger model.toasties
                 in
-                    Expect.equal view
-                        (Html.Keyed.ol []
-                            [ ( "0", li [ class "fadeIn", style [ ( "color", "green" ) ] ] [ div [] [ text "foo" ] ] )
-                            ]
-                        )
+                    -- elm-test can't test style attributess ATM https://github.com/eeue56/elm-html-test/issues/3
+                    view
+                        |> Query.fromHtml
+                        |> Query.findAll [ Selector.tag "li" ]
+                        |> Query.each (Query.has [ Selector.className "fadeIn" ])
         ]
