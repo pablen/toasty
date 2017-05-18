@@ -14,8 +14,11 @@ project by Daniel Eden.
 
 See a [demo](http://pablen-toasty-demo.surge.sh/).
 
+
 # Definition
+
 @docs Toast, config, view
+
 -}
 
 import Html.Attributes exposing (..)

@@ -28,6 +28,7 @@ in `Toasty.Defaults`. See a [demo using default styling](http://pablen-toasty-de
 
 ## Example
 
+
 ### Setting things up
 
 To use the package, let's look at an example that shows a simple text notification.
@@ -35,83 +36,74 @@ To use the package, let's look at an example that shows a simple text notificati
 First you add the toast stack to your model, wrapping the toast model you want in `Stack`.
 You must do it in a field called `toasties`:
 
-``` elm
-type alias Model =
-    { toasties : Toasty.Stack String }
-```
+    type alias Model =
+        { toasties : Toasty.Stack String }
 
 Add the stack initial state in your `init` function:
 
-```elm
-init : ( Model, Cmd Msg)
-init =
-    ( { toasties = Toasty.initialState } , Cmd.none )
-```
+    init : ( Model, Cmd Msg )
+    init =
+        ( { toasties = Toasty.initialState }, Cmd.none )
 
 Then add in a message that will handle toasts messages:
 
-```elm
-type alias Msg
-    = ToastyMsg (Toasty.Msg String)
-```
+    type alias Msg =
+        ToastyMsg (Toasty.Msg String)
 
 You can use the default configuration as-is or tweak it to your needs by piping configuration helpers:
 
-```elm
--- Create a custom configuration to make toasts visible for 8 seconds.
-myConfig : Toasty.Config msg
-myConfig =
-    Toasty.config
-        |> Toasty.transitionOutDuration 100
-        |> Toasty.delay 8000
-```
+    myConfig : Toasty.Config msg
+    myConfig =
+        Toasty.config
+            |> Toasty.transitionOutDuration 100
+            |> Toasty.delay 8000
 
 Handle the toasts message in your app update function using the library `update`
 function:
 
-```elm
-update msg model =
-    case msg of
-        ToastyMsg subMsg ->
-            Toasty.update myConfig ToastyMsg subMsg model
-```
+    update msg model =
+        case msg of
+            ToastyMsg subMsg ->
+                Toasty.update myConfig ToastyMsg subMsg model
 
 As a last step, render the toast stack in you `view` function. You will need to
 provide an special view function that knows how to render your toast model:
 
-```elm
-view : Model -> Html Msg
-view model =
-    div []
-        [ h1 [] [ text "Toasty example" ]
-        , Toasty.view myConfig renderToast ToastyMsg model.toasties
-        ]
+    view : Model -> Html Msg
+    view model =
+        div []
+            [ h1 [] [ text "Toasty example" ]
+            , Toasty.view myConfig renderToast ToastyMsg model.toasties
+            ]
 
-renderToast : String -> Html Msg
-renderToast toast =
-    div [] [ text toast ]
-```
+    renderToast : String -> Html Msg
+    renderToast toast =
+        div [] [ text toast ]
+
 
 ### Triggering toasts
+
 Most of the times you will want to trigger toasts as side-effect of some other app event,
 e.g. show a message when an asynchronous response was received. In order to do that, just
 pipe your update function returned value through the `addToast` function passing your
 configuration, tag and toast.
 
-```elm
-    update msg model =
-        case msg of
-            SomeAppMsg ->
-                ( newModel, Cmd.none )
-                    |> Toasty.addToast myConfig ToastyMsg "Entity successfully created!"
-```
+        update msg model =
+            case msg of
+                SomeAppMsg ->
+                    ( newModel, Cmd.none )
+                        |> Toasty.addToast myConfig ToastyMsg "Entity successfully created!"
 
 That's all!
 
+
 # Definition
+
 @docs Stack, Msg
 
+
 # Configuration
+
 The notifications appearance and behaviour can be fully customized. To do this,
 you need to import the default configuration and tweak it by piping the provided
 helper functions.
@@ -120,27 +112,29 @@ Note that as you can set container and items HTML attributes the library remains
 agnostic about how to style your toasts, enabling you to use inline styles or
 classes.
 
-```elm
-myConfig : Toasty.Config msg
-myConfig =
-    Toasty.config
-        |> Toasty.transitionOutDuration 700
-        |> Toasty.delay 8000
-        |> Toasty.containerAttrs containerAttrs
+    myConfig : Toasty.Config msg
+    myConfig =
+        Toasty.config
+            |> Toasty.transitionOutDuration 700
+            |> Toasty.delay 8000
+            |> Toasty.containerAttrs containerAttrs
 
-containerAttrs =
-    [ style
-        [ ( "max-width", "300px" )
-        , ( "position", "fixed" )
-        , ( "right", "0" )
-        , ( "top", "0" )
+    containerAttrs =
+        [ style
+            [ ( "max-width", "300px" )
+            , ( "position", "fixed" )
+            , ( "right", "0" )
+            , ( "top", "0" )
+            ]
         ]
-    ]
-```
+
 @docs config, delay, transitionOutDuration, containerAttrs, itemAttrs, transitionInAttrs, transitionOutAttrs, Config
 
+
 # Other functions
+
 @docs view, update, addToast, initialState
+
 -}
 
 import Html.Events exposing (..)
@@ -159,11 +153,14 @@ to be as complex or simple as you want.
         { toasties : Toasty.Stack MyToast
         }
 
+
     -- Defines a toast model that has three different variants
+
     type MyToast
         = Success String
         | Warning String
         | Error String String
+
 -}
 type Stack a
     = Stack (List ( Id, Status, a )) Seed
@@ -173,6 +170,7 @@ type Stack a
 
     type Msg
         = ToastyMsg (Toasty.Msg MyToast)
+
 -}
 type Msg a
     = Add a
@@ -277,6 +275,7 @@ initialState =
         case msg of
             ToastyMsg subMsg ->
                 Toasty.update Toasty.config ToastyMsg subMsg model
+
 -}
 update : Config msg -> (Msg a -> msg) -> Msg a -> { m | toasties : Stack a } -> ( { m | toasties : Stack a }, Cmd msg )
 update config tagger msg model =
@@ -323,8 +322,10 @@ update function branches.
             SomeAppMsg ->
                 ( newModel, Cmd.none )
                     |> Toasty.addToast myConfig ToastyMsg (MyToast "Entity successfully created!")
+
             ToastyMsg subMsg ->
                 Toasty.update myConfig ToastyMsg subMsg model
+
 -}
 addToast : Config msg -> (Msg a -> msg) -> a -> ( { m | toasties : Stack a }, Cmd msg ) -> ( { m | toasties : Stack a }, Cmd msg )
 addToast config tagger toast ( model, cmd ) =
@@ -348,8 +349,9 @@ give it a function that knows how to render your toasts model.
     view model =
         div []
             [ h1 [] [ text "Toasty example" ]
-            , Toasty.view myConfig (\txt -> div [] [text txt]) ToastyMsg model.toasties
+            , Toasty.view myConfig (\txt -> div [] [ text txt ]) ToastyMsg model.toasties
             ]
+
 -}
 view : Config msg -> (a -> Html msg) -> (Msg a -> msg) -> Stack a -> Html msg
 view config toastView tagger (Stack toasts seed) =
