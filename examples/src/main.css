@@ -1,3 +1,34 @@
 body {
   font-family: sans-serif;
 }
+
+.btn {
+  background: transparent;
+  padding: 7px 14px;
+  margin: 5px;
+  border-width: 1px;
+  border-style: solid;
+  border-radius: 3px;
+  font-size: inherit;
+  cursor: pointer;
+  transition: opacity 0.3s;
+}
+
+.btn:hover {
+  opacity: 0.6;
+}
+
+.success {
+  border-color: #2ecc40;
+  color: #2ecc40;
+}
+
+.warning {
+  border-color: #ff851b;
+  color: #ff851b;
+}
+
+.error {
+  border-color: #ff4136;
+  color: #ff4136;
+}

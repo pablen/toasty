@@ -1,11 +1,12 @@
 module App exposing (..)
 
-import Html.Attributes exposing (..)
+import Char
 import Html exposing (..)
-import Toasty.Defaults
+import Html.Attributes exposing (..)
+import Html.Events exposing (..)
 import Keyboard
 import Toasty
-import Char
+import Toasty.Defaults
 
 
 ---- MODEL ----
@@ -18,6 +19,7 @@ type alias Model =
 
 type Msg
     = KeyPressed Keyboard.KeyCode
+    | BtnClicked String
     | ToastyMsg (Toasty.Msg Toasty.Defaults.Toast)
 
 
@@ -59,7 +61,22 @@ update msg model =
                         |> addToast (Toasty.Defaults.Error "Error" "Sorry, something went wrong...")
 
                 _ ->
-                    (model ! [])
+                    model ! []
+
+        BtnClicked "success" ->
+            (model ! [])
+                |> addToast (Toasty.Defaults.Success "Allright!" "Thing successfully updated")
+
+        BtnClicked "warning" ->
+            (model ! [])
+                |> addToast (Toasty.Defaults.Warning "Warning!" "Please check this and that.")
+
+        BtnClicked "error" ->
+            (model ! [])
+                |> addToast (Toasty.Defaults.Error "Error" "Sorry, something went wrong...")
+
+        BtnClicked _ ->
+            model ! []
 
         ToastyMsg subMsg ->
             Toasty.update myConfig ToastyMsg subMsg model
@@ -74,7 +91,16 @@ view model =
     div []
         [ h1 [] [ text "Toasty demo" ]
         , p []
-            [ text "Press "
+            [ text "Click for adding a "
+            , button [ class "btn success", type_ "button", onClick <| BtnClicked "success" ] [ text "success" ]
+            , text ", "
+            , button [ class "btn warning", type_ "button", onClick <| BtnClicked "warning" ] [ text "warning" ]
+            , text " or "
+            , button [ class "btn error", type_ "button", onClick <| BtnClicked "error" ] [ text "error" ]
+            , text " toast."
+            ]
+        , p []
+            [ text "Also you can press in your keyboard "
             , kbd [] [ text "[s]" ]
             , text " for success, "
             , kbd [] [ text "[w]" ]
