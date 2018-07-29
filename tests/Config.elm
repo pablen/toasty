@@ -1,11 +1,11 @@
 module Config exposing (all)
 
-import Test.Html.Selector as Selector
-import Test.Html.Query as Query
-import Html.Attributes exposing (..)
-import Html exposing (..)
-import Test exposing (..)
 import Expect
+import Html exposing (..)
+import Html.Attributes exposing (..)
+import Test exposing (..)
+import Test.Html.Query as Query
+import Test.Html.Selector as Selector
 import Toasty
 
 
@@ -36,7 +36,7 @@ all =
                     view =
                         Toasty.view Toasty.config renderToast Tagger initialModel.toasties
                 in
-                    Expect.equal view (text "")
+                Expect.equal view (text "")
         , test "Renders list of toasts after adding toasts" <|
             \() ->
                 let
@@ -48,13 +48,13 @@ all =
                     view =
                         Toasty.view Toasty.config renderToast Tagger model.toasties
                 in
-                    view
-                        |> Query.fromHtml
-                        |> Query.findAll [ Selector.tag "li" ]
-                        |> Expect.all
-                            [ Query.index 0 >> Query.has [ Selector.text "foo" ]
-                            , Query.index 1 >> Query.has [ Selector.text "bar" ]
-                            ]
+                view
+                    |> Query.fromHtml
+                    |> Query.findAll [ Selector.tag "li" ]
+                    |> Expect.all
+                        [ Query.index 0 >> Query.has [ Selector.text "foo" ]
+                        , Query.index 1 >> Query.has [ Selector.text "bar" ]
+                        ]
         , test "Can add custom attributes to list container" <|
             \() ->
                 let
@@ -69,10 +69,10 @@ all =
                     view =
                         Toasty.view myConfig renderToast Tagger model.toasties
                 in
-                    -- elm-test can't test style attributess ATM https://github.com/eeue56/elm-html-test/issues/3
-                    view
-                        |> Query.fromHtml
-                        |> Query.has [ Selector.className "myClass" ]
+                -- elm-test can't test style attributess ATM https://github.com/eeue56/elm-html-test/issues/3
+                view
+                    |> Query.fromHtml
+                    |> Query.has [ Selector.class "myClass" ]
         , test "Can add custom attributes to toast container" <|
             \() ->
                 let
@@ -87,11 +87,11 @@ all =
                     view =
                         Toasty.view myConfig renderToast Tagger model.toasties
                 in
-                    -- elm-test can't test style attributess ATM https://github.com/eeue56/elm-html-test/issues/3
-                    view
-                        |> Query.fromHtml
-                        |> Query.findAll [ Selector.tag "li" ]
-                        |> Query.each (Query.has [ Selector.className "itemClass" ])
+                -- elm-test can't test style attributess ATM https://github.com/eeue56/elm-html-test/issues/3
+                view
+                    |> Query.fromHtml
+                    |> Query.findAll [ Selector.tag "li" ]
+                    |> Query.each (Query.has [ Selector.class "itemClass" ])
         , test "Can add custom attributes to toast container when transitioning in" <|
             \() ->
                 let
@@ -106,9 +106,9 @@ all =
                     view =
                         Toasty.view myConfig renderToast Tagger model.toasties
                 in
-                    -- elm-test can't test style attributess ATM https://github.com/eeue56/elm-html-test/issues/3
-                    view
-                        |> Query.fromHtml
-                        |> Query.findAll [ Selector.tag "li" ]
-                        |> Query.each (Query.has [ Selector.className "fadeIn" ])
+                -- elm-test can't test style attributess ATM https://github.com/eeue56/elm-html-test/issues/3
+                view
+                    |> Query.fromHtml
+                    |> Query.findAll [ Selector.tag "li" ]
+                    |> Query.each (Query.has [ Selector.class "fadeIn" ])
         ]
