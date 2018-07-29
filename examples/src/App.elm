@@ -39,6 +39,11 @@ addToast toast ( model, cmd ) =
     Toasty.addToast myConfig ToastyMsg toast ( model, cmd )
 
 
+addToastIfUnique : Toasty.Defaults.Toast -> ( Model, Cmd Msg ) -> ( Model, Cmd Msg )
+addToastIfUnique toast ( model, cmd ) =
+    Toasty.addToastIfUnique myConfig ToastyMsg toast ( model, cmd )
+
+
 
 ---- UPDATE ----
 
@@ -60,6 +65,10 @@ update msg model =
                     (model ! [])
                         |> addToast (Toasty.Defaults.Error "Error" "Sorry, something went wrong...")
 
+                'u' ->
+                    (model ! [])
+                        |> addToastIfUnique (Toasty.Defaults.Success "Unique toast" "Avoid repeated notifications")
+
                 _ ->
                     model ! []
 
@@ -74,6 +83,10 @@ update msg model =
         BtnClicked "error" ->
             (model ! [])
                 |> addToast (Toasty.Defaults.Error "Error" "Sorry, something went wrong...")
+
+        BtnClicked "unique" ->
+            (model ! [])
+                |> addToastIfUnique (Toasty.Defaults.Success "Unique toast" "Avoid repeated notifications")
 
         BtnClicked _ ->
             model ! []
@@ -95,8 +108,10 @@ view model =
             , button [ class "btn success", type_ "button", onClick <| BtnClicked "success" ] [ text "success" ]
             , text ", "
             , button [ class "btn warning", type_ "button", onClick <| BtnClicked "warning" ] [ text "warning" ]
-            , text " or "
+            , text ", "
             , button [ class "btn error", type_ "button", onClick <| BtnClicked "error" ] [ text "error" ]
+            , text " or "
+            , button [ class "btn", type_ "button", onClick <| BtnClicked "unique" ] [ text "unique" ]
             , text " toast."
             ]
         , p []
@@ -104,9 +119,11 @@ view model =
             , kbd [] [ text "[s]" ]
             , text " for success, "
             , kbd [] [ text "[w]" ]
-            , text " for warning or "
+            , text " for warning, "
             , kbd [] [ text "[e]" ]
-            , text " for error toasts."
+            , text " for error or "
+            , kbd [] [ text "[u]" ]
+            , text " for unique toasts."
             ]
         , p [ class "help small" ] [ text "Click on any toast to remove it." ]
         , p [] [ text "This demo uses ", code [] [ text "Toasty.Defaults" ], text " for styling." ]

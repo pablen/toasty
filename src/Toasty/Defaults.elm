@@ -21,8 +21,8 @@ See a [demo](http://pablen-toasty-demo.surge.sh/).
 
 -}
 
-import Html.Attributes exposing (..)
 import Html exposing (..)
+import Html.Attributes exposing (..)
 import Toasty
 
 
@@ -109,7 +109,7 @@ genericToast variantClass title message =
     div
         [ class "toasty-container", class variantClass ]
         [ h1 [ class "toasty-title" ] [ text title ]
-        , if (String.isEmpty message) then
+        , if String.isEmpty message then
             text ""
           else
             p [ class "toasty-message" ] [ text message ]
