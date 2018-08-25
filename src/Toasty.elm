@@ -1,23 +1,8 @@
-module Toasty
-    exposing
-        ( Config
-        , Msg
-        , Stack
-        , addToast
-        , addToastIf
-        , addToastIfUnique
-        , config
-        , containerAttrs
-        , delay
-        , hasToast
-        , initialState
-        , itemAttrs
-        , transitionInAttrs
-        , transitionOutAttrs
-        , transitionOutDuration
-        , update
-        , view
-        )
+module Toasty exposing
+    ( Stack, Msg
+    , config, delay, transitionOutDuration, containerAttrs, itemAttrs, transitionInAttrs, transitionOutAttrs, Config
+    , view, update, addToast, addToastIf, addToastIfUnique, hasToast, initialState
+    )
 
 {-| This package lets you easily show customizable toast notifications in your
 Elm apps following The Elm Architecture. You will be able to trigger toasts as
@@ -42,13 +27,16 @@ You must do it in a field called `toasties`:
     type alias Model =
         { toasties : Toasty.Stack String }
 
+Note that in this example we are modelling our toasts as a simple `String`,
+but we can model our toasts however we need.
+
 Add the stack initial state in your `init` function:
 
     init : ( Model, Cmd Msg )
     init =
         ( { toasties = Toasty.initialState }, Cmd.none )
 
-Then add in a message that will handle toasts messages:
+Then add a message that will handle toasts messages:
 
     type alias Msg =
         ToastyMsg (Toasty.Msg String)
@@ -70,7 +58,7 @@ function:
                 Toasty.update myConfig ToastyMsg subMsg model
 
 As a last step, render the toast stack in you `view` function. You will need to
-provide an special view function that knows how to render your toast model:
+provide a special view function that knows how to render your toast model:
 
     view : Model -> Html Msg
     view model =
@@ -86,9 +74,9 @@ provide an special view function that knows how to render your toast model:
 
 ### Triggering toasts
 
-Most of the times you will want to trigger toasts as side-effect of some other app event,
+A pretty common scenario is to trigger toasts as side-effect of some other app event,
 e.g. show a message when an asynchronous response was received. In order to do that, just
-pipe your update function returned value through the `addToast` function passing your
+pipe your update function return value through the `addToast` function passing your
 configuration, tag and toast.
 
         update msg model =
@@ -123,12 +111,10 @@ classes.
             |> Toasty.containerAttrs containerAttrs
 
     containerAttrs =
-        [ style
-            [ ( "max-width", "300px" )
-            , ( "position", "fixed" )
-            , ( "right", "0" )
-            , ( "top", "0" )
-            ]
+        [ style "max-width" "300px"
+        , style "position" "fixed"
+        , style "right" "0"
+        , style "top" "0"
         ]
 
 @docs config, delay, transitionOutDuration, containerAttrs, itemAttrs, transitionInAttrs, transitionOutAttrs, Config
@@ -146,7 +132,6 @@ import Html.Keyed
 import Process
 import Random exposing (Seed)
 import Task
-import Time
 
 
 {-| Represents the stack of current toasts notifications. You can model a toast
@@ -158,7 +143,6 @@ to be as complex or simple as you want.
 
 
     -- Defines a toast model that has three different variants
-
     type MyToast
         = Success String
         | Warning String
@@ -281,11 +265,8 @@ initialState =
 
 -}
 update : Config msg -> (Msg a -> msg) -> Msg a -> { m | toasties : Stack a } -> ( { m | toasties : Stack a }, Cmd msg )
-update config tagger msg model =
+update (Config cfg) tagger msg model =
     let
-        (Config cfg) =
-            config
-
         (Stack toasts seed) =
             model.toasties
     in
@@ -298,7 +279,9 @@ update config tagger msg model =
                 newStack =
                     List.filter (\( id, toast, status ) -> id /= targetId) toasts
             in
-            { model | toasties = Stack newStack seed } ! []
+            ( { model | toasties = Stack newStack seed }
+            , Cmd.none
+            )
 
         TransitionOut targetId ->
             let
@@ -307,13 +290,15 @@ update config tagger msg model =
                         (\( id, status, toast ) ->
                             if id == targetId then
                                 ( id, Leaving, toast )
+
                             else
                                 ( id, status, toast )
                         )
                         toasts
             in
-            { model | toasties = Stack newStack seed }
-                ! [ Task.perform (\_ -> tagger (Remove targetId)) (Process.sleep <| cfg.transitionOutDuration * Time.millisecond) ]
+            ( { model | toasties = Stack newStack seed }
+            , Task.perform (\_ -> tagger (Remove targetId)) (Process.sleep <| cfg.transitionOutDuration)
+            )
 
 
 {-| Adds a toast to the stack and schedules its removal. It receives and returns
@@ -331,26 +316,24 @@ update function branches.
 
 -}
 addToast : Config msg -> (Msg a -> msg) -> a -> ( { m | toasties : Stack a }, Cmd msg ) -> ( { m | toasties : Stack a }, Cmd msg )
-addToast config tagger toast ( model, cmd ) =
+addToast (Config cfg) tagger toast ( model, cmd ) =
     let
-        (Config cfg) =
-            config
-
         (Stack toasts seed) =
             model.toasties
 
         ( newId, newSeed ) =
             getNewId seed
     in
-    { model | toasties = Stack (toasts ++ [ ( newId, Entered, toast ) ]) newSeed }
-        ! [ cmd, Task.perform (\() -> tagger (TransitionOut newId)) (Process.sleep <| cfg.delay * Time.millisecond) ]
+    ( { model | toasties = Stack (toasts ++ [ ( newId, Entered, toast ) ]) newSeed }
+    , Cmd.batch [ cmd, Task.perform (\() -> tagger (TransitionOut newId)) (Process.sleep <| cfg.delay) ]
+    )
 
 
 {-| Similar to `addToast` but also receives a condition parameter `List toast -> Bool`
 so that the toast will only be added if the condition returns `True`.
 -}
 addToastIf : Config msg -> (Msg a -> msg) -> (List a -> Bool) -> a -> ( { m | toasties : Stack a }, Cmd msg ) -> ( { m | toasties : Stack a }, Cmd msg )
-addToastIf config tagger condition toast ( model, cmd ) =
+addToastIf cfg tagger condition toast ( model, cmd ) =
     let
         (Stack toasts seed) =
             model.toasties
@@ -361,9 +344,12 @@ addToastIf config tagger condition toast ( model, cmd ) =
                 |> condition
     in
     if shouldAddToast then
-        addToast config tagger toast ( model, cmd )
+        addToast cfg tagger toast ( model, cmd )
+
     else
-        model ! []
+        ( model
+        , Cmd.none
+        )
 
 
 {-| Similar to `addToast` but only effectively adds the toast if it's not already
@@ -371,8 +357,8 @@ present in the stack. This is a convenience `addToastIf` function using
 `not << List.member toast` as a `condition` parameter.
 -}
 addToastIfUnique : Config msg -> (Msg a -> msg) -> a -> ( { m | toasties : Stack a }, Cmd msg ) -> ( { m | toasties : Stack a }, Cmd msg )
-addToastIfUnique config tagger toast ( model, cmd ) =
-    addToastIf config tagger (not << List.member toast) toast ( model, cmd )
+addToastIfUnique cfg tagger toast ( model, cmd ) =
+    addToastIf cfg tagger (not << List.member toast) toast ( model, cmd )
 
 
 {-| Figure out whether a stack contains a specific toast. Similar to `List.member`.
@@ -395,15 +381,16 @@ give it a function that knows how to render your toasts model.
 
 -}
 view : Config msg -> (a -> Html msg) -> (Msg a -> msg) -> Stack a -> Html msg
-view config toastView tagger (Stack toasts seed) =
+view cfg toastView tagger (Stack toasts seed) =
     let
-        (Config cfg) =
-            config
+        (Config c) =
+            cfg
     in
     if List.isEmpty toasts then
         text ""
+
     else
-        Html.Keyed.ol cfg.containerAttrs <| List.map (\toast -> itemContainer config tagger toast toastView) toasts
+        Html.Keyed.ol c.containerAttrs <| List.map (\toast -> itemContainer cfg tagger toast toastView) toasts
 
 
 getNewId : Seed -> ( Id, Seed )
@@ -422,4 +409,4 @@ itemContainer (Config cfg) tagger ( id, status, toast ) toastView =
                 Leaving ->
                     cfg.transitionOutAttrs
     in
-    ( toString id, li (cfg.itemAttrs ++ attrs ++ [ onClick (tagger <| TransitionOut id) ]) [ toastView toast ] )
+    ( String.fromInt id, li (cfg.itemAttrs ++ attrs ++ [ onClick (tagger <| TransitionOut id) ]) [ toastView toast ] )

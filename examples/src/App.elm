@@ -1,12 +1,15 @@
-module App exposing (..)
+module App exposing (Model, Msg(..), addToast, addToastIfUnique, init, main, myConfig, update, view)
 
+import Browser
+import Browser.Events
 import Char
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
-import Keyboard
+import Json.Decode
 import Toasty
 import Toasty.Defaults
+
 
 
 ---- MODEL ----
@@ -18,14 +21,22 @@ type alias Model =
 
 
 type Msg
-    = KeyPressed Keyboard.KeyCode
+    = KeyPressed String
     | BtnClicked String
     | ToastyMsg (Toasty.Msg Toasty.Defaults.Toast)
 
 
-init : ( Model, Cmd Msg )
-init =
-    { toasties = Toasty.initialState } ! []
+keyDecoder : Json.Decode.Decoder Msg
+keyDecoder =
+    Json.Decode.map KeyPressed <|
+        Json.Decode.field "key" Json.Decode.string
+
+
+init : () -> ( Model, Cmd Msg )
+init flags =
+    ( { toasties = Toasty.initialState }
+    , Cmd.none
+    )
 
 
 myConfig : Toasty.Config Msg
@@ -52,44 +63,64 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         KeyPressed keycode ->
-            case Char.fromCode keycode of
-                's' ->
-                    (model ! [])
+            case keycode of
+                "s" ->
+                    ( model
+                    , Cmd.none
+                    )
                         |> addToast (Toasty.Defaults.Success "Allright!" "Thing successfully updated")
 
-                'w' ->
-                    (model ! [])
+                "w" ->
+                    ( model
+                    , Cmd.none
+                    )
                         |> addToast (Toasty.Defaults.Warning "Warning!" "Please check this and that.")
 
-                'e' ->
-                    (model ! [])
+                "e" ->
+                    ( model
+                    , Cmd.none
+                    )
                         |> addToast (Toasty.Defaults.Error "Error" "Sorry, something went wrong...")
 
-                'u' ->
-                    (model ! [])
+                "u" ->
+                    ( model
+                    , Cmd.none
+                    )
                         |> addToastIfUnique (Toasty.Defaults.Success "Unique toast" "Avoid repeated notifications")
 
                 _ ->
-                    model ! []
+                    ( model
+                    , Cmd.none
+                    )
 
         BtnClicked "success" ->
-            (model ! [])
+            ( model
+            , Cmd.none
+            )
                 |> addToast (Toasty.Defaults.Success "Allright!" "Thing successfully updated")
 
         BtnClicked "warning" ->
-            (model ! [])
+            ( model
+            , Cmd.none
+            )
                 |> addToast (Toasty.Defaults.Warning "Warning!" "Please check this and that.")
 
         BtnClicked "error" ->
-            (model ! [])
+            ( model
+            , Cmd.none
+            )
                 |> addToast (Toasty.Defaults.Error "Error" "Sorry, something went wrong...")
 
         BtnClicked "unique" ->
-            (model ! [])
+            ( model
+            , Cmd.none
+            )
                 |> addToastIfUnique (Toasty.Defaults.Success "Unique toast" "Avoid repeated notifications")
 
         BtnClicked _ ->
-            model ! []
+            ( model
+            , Cmd.none
+            )
 
         ToastyMsg subMsg ->
             Toasty.update myConfig ToastyMsg subMsg model
@@ -139,11 +170,11 @@ view model =
 ---- PROGRAM ----
 
 
-main : Program Never Model Msg
+main : Program () Model Msg
 main =
-    Html.program
+    Browser.element
         { view = view
         , init = init
         , update = update
-        , subscriptions = \_ -> Keyboard.presses KeyPressed
+        , subscriptions = \_ -> Browser.Events.onKeyPress keyDecoder
         }

@@ -9,7 +9,7 @@ See a [demo](http://pablen-toasty-demo.surge.sh/) using `Toasty.Defaults` stylin
 
 ## Installation
 
-From your top-level directory - the one with `elm-package.json` in - call:
+From your top-level directory - the one with `elm.json` in - call:
 
 ```
 $ elm package install pablen/toasty
@@ -21,6 +21,6 @@ $ elm package install pablen/toasty
 
 ## License
 
-Copyright © 2017 Pablo Enrici
+Copyright © 2018 Pablo Enrici
 
-Distributed under the BSD3 license.
+Distributed under the BSD-3-Clause license.

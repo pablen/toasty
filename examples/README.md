@@ -2,6 +2,7 @@ This project is bootstrapped with [Create Elm App](https://github.com/halfzebra/
 
 ## Available scripts
 In the project directory you can run:
+
 ### `elm-app build`
 Builds the app for production to the `dist` folder.  
 

@@ -41,7 +41,9 @@ all =
             \() ->
                 let
                     ( model, cmd ) =
-                        (initialModel ! [])
+                        ( initialModel
+                        , Cmd.none
+                        )
                             |> Toasty.addToast Toasty.config Tagger "foo"
                             |> Toasty.addToast Toasty.config Tagger "bar"
 
@@ -59,12 +61,14 @@ all =
             \() ->
                 let
                     ( model, cmd ) =
-                        (initialModel ! [])
+                        ( initialModel
+                        , Cmd.none
+                        )
                             |> Toasty.addToast Toasty.config Tagger "foo"
 
                     myConfig =
                         Toasty.config
-                            |> Toasty.containerAttrs [ class "myClass", style [ ( "color", "red" ) ] ]
+                            |> Toasty.containerAttrs [ class "myClass", style "color" "red" ]
 
                     view =
                         Toasty.view myConfig renderToast Tagger model.toasties
@@ -77,12 +81,14 @@ all =
             \() ->
                 let
                     ( model, cmd ) =
-                        (initialModel ! [])
+                        ( initialModel
+                        , Cmd.none
+                        )
                             |> Toasty.addToast Toasty.config Tagger "foo"
 
                     myConfig =
                         Toasty.config
-                            |> Toasty.itemAttrs [ class "itemClass", style [ ( "color", "blue" ) ] ]
+                            |> Toasty.itemAttrs [ class "itemClass", style "color" "blue" ]
 
                     view =
                         Toasty.view myConfig renderToast Tagger model.toasties
@@ -96,12 +102,14 @@ all =
             \() ->
                 let
                     ( model, cmd ) =
-                        (initialModel ! [])
+                        ( initialModel
+                        , Cmd.none
+                        )
                             |> Toasty.addToast Toasty.config Tagger "foo"
 
                     myConfig =
                         Toasty.config
-                            |> Toasty.transitionInAttrs [ class "fadeIn", style [ ( "color", "green" ) ] ]
+                            |> Toasty.transitionInAttrs [ class "fadeIn", style "color" "green" ]
 
                     view =
                         Toasty.view myConfig renderToast Tagger model.toasties
