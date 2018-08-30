@@ -331,19 +331,7 @@ addToast =
     addToast_ Temporary
 
 
-{-| Adds a toast that won't be removed after a timeout to the stack. It receives and returns
-a tuple of type '(model, Cmd msg)' so that you can easily pipe it to your app
-update function branches.
-
-    update msg model =
-        case msg of
-            SomeAppMsg ->
-                ( newModel, Cmd.none )
-                    |> Toasty.addPersistentToast myConfig ToastyMsg (MyToast "Entity successfully created!")
-
-            ToastyMsg subMsg ->
-                Toasty.update myConfig ToastyMsg subMsg model
-
+{-| Similar to `addToast` but doesn't schedule the toast removal, so it will remain visible until clicked.
 -}
 addPersistentToast : Config msg -> (Msg a -> msg) -> a -> ( { m | toasties : Stack a }, Cmd msg ) -> ( { m | toasties : Stack a }, Cmd msg )
 addPersistentToast =
