@@ -3,7 +3,7 @@
     "name": "pablen/toasty",
     "summary": "A configurable toast notification package for Elm apps.",
     "license": "BSD-3-Clause",
-    "version": "1.1.1",
+    "version": "1.2.0",
     "exposed-modules": [
         "Toasty",
         "Toasty.Defaults"

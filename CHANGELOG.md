@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.2.0
+
+* Adds `addPersistentToast` helper method. Thanks to [@mdevlamynck](https://github.com/mdevlamynck).
+
 ## 1.1.1
 
 * Update to elm 0.19.
