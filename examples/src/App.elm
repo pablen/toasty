@@ -1,4 +1,4 @@
-module App exposing (Model, Msg(..), addToast, addToastIfUnique, init, main, myConfig, update, view)
+module App exposing (main)
 
 import Browser
 import Browser.Events
@@ -53,6 +53,11 @@ addToast toast ( model, cmd ) =
 addToastIfUnique : Toasty.Defaults.Toast -> ( Model, Cmd Msg ) -> ( Model, Cmd Msg )
 addToastIfUnique toast ( model, cmd ) =
     Toasty.addToastIfUnique myConfig ToastyMsg toast ( model, cmd )
+
+
+addPersistentToast : Toasty.Defaults.Toast -> ( Model, Cmd Msg ) -> ( Model, Cmd Msg )
+addPersistentToast toast ( model, cmd ) =
+    Toasty.addPersistentToast myConfig ToastyMsg toast ( model, cmd )
 
 
 
@@ -111,6 +116,12 @@ update msg model =
             )
                 |> addToast (Toasty.Defaults.Error "Error" "Sorry, something went wrong...")
 
+        BtnClicked "persistent" ->
+            ( model
+            , Cmd.none
+            )
+                |> addPersistentToast (Toasty.Defaults.Success "Persistent Toast" "This toast will remain visible until clicked.")
+
         BtnClicked "unique" ->
             ( model
             , Cmd.none
@@ -141,6 +152,8 @@ view model =
             , button [ class "btn warning", type_ "button", onClick <| BtnClicked "warning" ] [ text "warning" ]
             , text ", "
             , button [ class "btn error", type_ "button", onClick <| BtnClicked "error" ] [ text "error" ]
+            , text ", "
+            , button [ class "btn", type_ "button", onClick <| BtnClicked "persistent" ] [ text "persistent" ]
             , text " or "
             , button [ class "btn", type_ "button", onClick <| BtnClicked "unique" ] [ text "unique" ]
             , text " toast."
@@ -152,7 +165,9 @@ view model =
             , kbd [] [ text "[w]" ]
             , text " for warning, "
             , kbd [] [ text "[e]" ]
-            , text " for error or "
+            , text " for error, "
+            , kbd [] [ text "[p]" ]
+            , text " for persistent or "
             , kbd [] [ text "[u]" ]
             , text " for unique toasts."
             ]
