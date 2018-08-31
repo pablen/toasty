@@ -87,6 +87,12 @@ update msg model =
                     )
                         |> addToast (Toasty.Defaults.Error "Error" "Sorry, something went wrong...")
 
+                "p" ->
+                    ( model
+                    , Cmd.none
+                    )
+                        |> addPersistentToast (Toasty.Defaults.Success "Persistent Toast" "This toast will remain visible until clicked.")
+
                 "u" ->
                     ( model
                     , Cmd.none

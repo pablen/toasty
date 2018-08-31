@@ -1,7 +1,8 @@
 require('./main.css');
 require('../../src/Toasty/Defaults.css');
-var Elm = require('./App.elm');
 
-var app = Elm.App.init({
+var myApp = require('./App.elm');
+
+myApp.Elm.App.init({
   node: document.getElementById('root')
 });
