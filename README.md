@@ -12,7 +12,7 @@ See a [demo](http://pablen-toasty-demo.surge.sh/) using `Toasty.Defaults` stylin
 From your top-level directory - the one with `elm.json` in - call:
 
 ```
-$ elm package install pablen/toasty
+$ elm install pablen/toasty
 ```
 
 ## Documentation
