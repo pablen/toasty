@@ -1,7 +1,7 @@
 module Toasty exposing
     ( Stack, Msg
-    , config, delay, transitionOutDuration, containerAttrs, itemAttrs, transitionInAttrs, transitionOutAttrs, Config
-    , view, update, addToast, addPersistentToast, addToastIf, addToastIfUnique, hasToast, initialState
+    , config, check, delay, transitionOutDuration, containerAttrs, itemAttrs, transitionInAttrs, transitionOutAttrs, Config
+    , view, update, addToast, addPersistentToast, addConditionalToast, addToastIf, addToastIfUnique, hasToast, initialState
     )
 
 {-| This package lets you easily show customizable toast notifications in your
@@ -153,27 +153,17 @@ type Stack a
     = Stack (List ( Id, Status, a )) Seed
 
 
-{-| How the toast will be removed.
-
-Temporary toasts are removed after a timeout or after a click,
-Persistent toasts must be clicked to be removed.
-
--}
-type RemoveBehaviour
-    = Temporary
-    | Persistent
-
-
 {-| The internal message type used by the library. You need to tag and add it to your app messages.
 
     type Msg
         = ToastyMsg (Toasty.Msg MyToast)
 
 -}
-type Msg a
+type Msg a m
     = Add a
     | Remove Id
     | TransitionOut Id
+    | CheckCondition Id (m -> Bool)
 
 
 {-| The base configuration type.
@@ -186,6 +176,7 @@ type Config msg
         , containerAttrs : List (Html.Attribute msg)
         , itemAttrs : List (Html.Attribute msg)
         , delay : Float
+        , check : Float
         }
 
 
@@ -199,7 +190,7 @@ type Status
 
 
 {-| Some basic configuration defaults: Toasts are visible for 5 seconds with
-no animations or special styling.
+no animations or special styling. Conditional toasts are checked each second.
 -}
 config : Config msg
 config =
@@ -210,6 +201,7 @@ config =
         , containerAttrs = []
         , itemAttrs = []
         , delay = 5000
+        , check = 1000
         }
 
 
@@ -260,11 +252,26 @@ delay time (Config cfg) =
     Config { cfg | delay = time }
 
 
+{-| Changes the delay (in milliseconds) between checking conditional toasts.
+-}
+check : Float -> Config msg -> Config msg
+check time (Config cfg) =
+    Config { cfg | check = time }
+
+
 {-| An empty stack of toasts to initialize your model with.
 -}
 initialState : Stack a
 initialState =
     Stack [] (Random.initialSeed 0)
+
+
+type alias Model a m =
+    { m | toasties: Stack a }
+
+
+type alias Tagger a m msg =
+    Msg a (Model a m) -> msg
 
 
 {-| Handles the internal messages. You need to wire it to your app update function
@@ -275,7 +282,7 @@ initialState =
                 Toasty.update Toasty.config ToastyMsg subMsg model
 
 -}
-update : Config msg -> (Msg a -> msg) -> Msg a -> { m | toasties : Stack a } -> ( { m | toasties : Stack a }, Cmd msg )
+update : Config msg -> Tagger a m msg -> Msg a (Model a m) -> Model a m -> ( Model a m, Cmd msg )
 update (Config cfg) tagger msg model =
     let
         (Stack toasts seed) =
@@ -311,6 +318,19 @@ update (Config cfg) tagger msg model =
             , Task.perform (\_ -> tagger (Remove targetId)) (Process.sleep <| cfg.transitionOutDuration)
             )
 
+        CheckCondition targetId condition ->
+            let
+                toastRemoved = List.isEmpty <| List.filter (\( id, toast, status ) -> id == targetId) toasts
+                task =
+                    if toastRemoved then
+                        Cmd.none
+                    else if condition model then
+                        Task.perform (\() -> tagger (CheckCondition targetId condition)) (Process.sleep <| cfg.check)
+                    else
+                        Task.perform (\() -> tagger (TransitionOut targetId)) (Process.sleep <| cfg.delay)
+            in
+                ( model, task )
+
 
 {-| Adds a toast to the stack and schedules its removal. It receives and returns
 a tuple of type '(model, Cmd msg)' so that you can easily pipe it to your app
@@ -326,22 +346,29 @@ update function branches.
                 Toasty.update myConfig ToastyMsg subMsg model
 
 -}
-addToast : Config msg -> (Msg a -> msg) -> a -> ( { m | toasties : Stack a }, Cmd msg ) -> ( { m | toasties : Stack a }, Cmd msg )
+addToast : Config msg -> (Msg a (Model a m) -> msg) -> a -> ( Model a m, Cmd msg ) -> ( Model a m, Cmd msg )
 addToast =
-    addToast_ Temporary
+    addToast_ (\m -> False)
 
 
 {-| Similar to `addToast` but doesn't schedule the toast removal, so it will remain visible until clicked.
 -}
-addPersistentToast : Config msg -> (Msg a -> msg) -> a -> ( { m | toasties : Stack a }, Cmd msg ) -> ( { m | toasties : Stack a }, Cmd msg )
+addPersistentToast : Config msg -> (Msg a (Model a m) -> msg) -> a -> ( Model a m, Cmd msg ) -> ( Model a m, Cmd msg )
 addPersistentToast =
-    addToast_ Persistent
+    addToast_ (\m -> True)
+
+
+{-| Similar to `addToast` but keeps the toast opened while the condition is True.
+-}
+addConditionalToast : (Model a m -> Bool) -> Config msg -> (Msg a (Model a m) -> msg) -> a -> ( Model a m, Cmd msg ) -> ( Model a m, Cmd msg )
+addConditionalToast condition =
+    addToast_ condition
 
 
 {-| Similar to `addToast` but also receives a condition parameter `List toast -> Bool`
 so that the toast will only be added if the condition returns `True`.
 -}
-addToastIf : Config msg -> (Msg a -> msg) -> (List a -> Bool) -> a -> ( { m | toasties : Stack a }, Cmd msg ) -> ( { m | toasties : Stack a }, Cmd msg )
+addToastIf : Config msg -> Tagger a m msg -> (List a -> Bool) -> a -> ( Model a m, Cmd msg ) -> ( Model a m, Cmd msg )
 addToastIf cfg tagger condition toast ( model, cmd ) =
     let
         (Stack toasts seed) =
@@ -365,7 +392,7 @@ addToastIf cfg tagger condition toast ( model, cmd ) =
 present in the stack. This is a convenience `addToastIf` function using
 `not << List.member toast` as a `condition` parameter.
 -}
-addToastIfUnique : Config msg -> (Msg a -> msg) -> a -> ( { m | toasties : Stack a }, Cmd msg ) -> ( { m | toasties : Stack a }, Cmd msg )
+addToastIfUnique : Config msg -> Tagger a m msg -> a -> ( Model a m, Cmd msg ) -> ( Model a m, Cmd msg )
 addToastIfUnique cfg tagger toast ( model, cmd ) =
     addToastIf cfg tagger (not << List.member toast) toast ( model, cmd )
 
@@ -379,8 +406,8 @@ hasToast toast (Stack toasts _) =
         |> List.member toast
 
 
-addToast_ : RemoveBehaviour -> Config msg -> (Msg a -> msg) -> a -> ( { m | toasties : Stack a }, Cmd msg ) -> ( { m | toasties : Stack a }, Cmd msg )
-addToast_ removeBehaviour (Config cfg) tagger toast ( model, cmd ) =
+addToast_ : (Model a m -> Bool) -> Config msg -> Tagger a m msg -> a -> ( Model a m, Cmd msg ) -> ( Model a m, Cmd msg )
+addToast_ condition (Config cfg) tagger toast ( model, cmd ) =
     let
         (Stack toasts seed) =
             model.toasties
@@ -389,12 +416,8 @@ addToast_ removeBehaviour (Config cfg) tagger toast ( model, cmd ) =
             getNewId seed
 
         task =
-            case removeBehaviour of
-                Temporary ->
-                    Task.perform (\() -> tagger (TransitionOut newId)) (Process.sleep <| cfg.delay)
+            Task.perform (\() -> tagger (CheckCondition newId condition)) (Process.sleep <| 0)
 
-                Persistent ->
-                    Cmd.none
     in
     ( { model | toasties = Stack (toasts ++ [ ( newId, Entered, toast ) ]) newSeed }
     , Cmd.batch [ cmd, task ]
@@ -411,7 +434,7 @@ give it a function that knows how to render your toasts model.
             ]
 
 -}
-view : Config msg -> (a -> Html msg) -> (Msg a -> msg) -> Stack a -> Html msg
+view : Config msg -> (a -> Html msg) -> (Msg a m -> msg) -> Stack a -> Html msg
 view cfg toastView tagger (Stack toasts seed) =
     let
         (Config c) =
@@ -429,7 +452,7 @@ getNewId seed =
     Random.step (Random.int Random.minInt Random.maxInt) seed
 
 
-itemContainer : Config msg -> (Msg a -> msg) -> ( Id, Status, a ) -> (a -> Html msg) -> ( String, Html msg )
+itemContainer : Config msg -> (Msg a m -> msg) -> ( Id, Status, a ) -> (a -> Html msg) -> ( String, Html msg )
 itemContainer (Config cfg) tagger ( id, status, toast ) toastView =
     let
         attrs =
