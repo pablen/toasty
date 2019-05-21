@@ -153,18 +153,6 @@ type Stack a
     = Stack (List ( Id, Status, a )) Seed
 
 
-{-| How the toast will be removed.
-
-Temporary toasts are removed after a timeout or after a click,
-Persistent toasts must be clicked to be removed.
-
--}
-type RemoveBehaviour m
-    = Temporary
-    | Persistent
-    | Conditional (m -> Bool)
-
-
 {-| The internal message type used by the library. You need to tag and add it to your app messages.
 
     type Msg
@@ -360,21 +348,21 @@ update function branches.
 -}
 addToast : Config msg -> (Msg a (Model a m) -> msg) -> a -> ( Model a m, Cmd msg ) -> ( Model a m, Cmd msg )
 addToast =
-    addToast_ Temporary
+    addToast_ (\m -> False)
 
 
 {-| Similar to `addToast` but doesn't schedule the toast removal, so it will remain visible until clicked.
 -}
 addPersistentToast : Config msg -> (Msg a (Model a m) -> msg) -> a -> ( Model a m, Cmd msg ) -> ( Model a m, Cmd msg )
 addPersistentToast =
-    addToast_ Persistent
+    addToast_ (\m -> True)
 
 
 {-| Similar to `addToast` but keeps the toast opened while the condition is True.
 -}
 addConditionalToast : (Model a m -> Bool) -> Config msg -> (Msg a (Model a m) -> msg) -> a -> ( Model a m, Cmd msg ) -> ( Model a m, Cmd msg )
 addConditionalToast condition =
-    addToast_ (Conditional condition)
+    addToast_ condition
 
 
 {-| Similar to `addToast` but also receives a condition parameter `List toast -> Bool`
@@ -418,8 +406,8 @@ hasToast toast (Stack toasts _) =
         |> List.member toast
 
 
-addToast_ : RemoveBehaviour (Model a m) -> Config msg -> Tagger a m msg -> a -> ( Model a m, Cmd msg ) -> ( Model a m, Cmd msg )
-addToast_ removeBehaviour (Config cfg) tagger toast ( model, cmd ) =
+addToast_ : (Model a m -> Bool) -> Config msg -> Tagger a m msg -> a -> ( Model a m, Cmd msg ) -> ( Model a m, Cmd msg )
+addToast_ condition (Config cfg) tagger toast ( model, cmd ) =
     let
         (Stack toasts seed) =
             model.toasties
@@ -428,15 +416,7 @@ addToast_ removeBehaviour (Config cfg) tagger toast ( model, cmd ) =
             getNewId seed
 
         task =
-            case removeBehaviour of
-                Temporary ->
-                    Task.perform (\() -> tagger (TransitionOut newId)) (Process.sleep <| cfg.delay)
-
-                Persistent ->
-                    Cmd.none
-
-                Conditional condition ->
-                    Task.perform (\() -> tagger (CheckCondition newId condition)) (Process.sleep <| cfg.check)
+            Task.perform (\() -> tagger (CheckCondition newId condition)) (Process.sleep <| 0)
 
     in
     ( { model | toasties = Stack (toasts ++ [ ( newId, Entered, toast ) ]) newSeed }
