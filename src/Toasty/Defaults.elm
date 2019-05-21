@@ -41,6 +41,7 @@ config =
         |> Toasty.containerAttrs containerAttrs
         |> Toasty.itemAttrs itemAttrs
         |> Toasty.delay 5000
+        |> Toasty.check 1000
 
 
 containerAttrs : List (Html.Attribute msg)

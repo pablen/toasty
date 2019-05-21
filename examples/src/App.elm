@@ -9,6 +9,8 @@ import Html.Events exposing (..)
 import Json.Decode
 import Toasty
 import Toasty.Defaults
+import Process
+import Task
 
 
 
@@ -17,13 +19,15 @@ import Toasty.Defaults
 
 type alias Model =
     { toasties : Toasty.Stack Toasty.Defaults.Toast
+    , flag : Bool
     }
 
 
 type Msg
     = KeyPressed String
     | BtnClicked String
-    | ToastyMsg (Toasty.Msg Toasty.Defaults.Toast)
+    | ConditionFlipped
+    | ToastyMsg (Toasty.Msg Toasty.Defaults.Toast Model)
 
 
 keyDecoder : Json.Decode.Decoder Msg
@@ -34,7 +38,7 @@ keyDecoder =
 
 init : () -> ( Model, Cmd Msg )
 init flags =
-    ( { toasties = Toasty.initialState }
+    ( { toasties = Toasty.initialState, flag = True }
     , Cmd.none
     )
 
@@ -59,6 +63,10 @@ addPersistentToast : Toasty.Defaults.Toast -> ( Model, Cmd Msg ) -> ( Model, Cmd
 addPersistentToast toast ( model, cmd ) =
     Toasty.addPersistentToast myConfig ToastyMsg toast ( model, cmd )
 
+
+addConditionalToast : (Model -> Bool) -> Toasty.Defaults.Toast -> ( Model, Cmd Msg ) -> ( Model, Cmd Msg )
+addConditionalToast condition toast ( model, cmd ) =
+    Toasty.addConditionalToast condition myConfig ToastyMsg toast ( model, cmd )
 
 
 ---- UPDATE ----
@@ -99,6 +107,12 @@ update msg model =
                     )
                         |> addToastIfUnique (Toasty.Defaults.Success "Unique toast" "Avoid repeated notifications")
 
+                "c" ->
+                    ( model
+                    , Cmd.none
+                    )
+                        |> addConditionalToast (\m -> m.flag) (Toasty.Defaults.Success "Conditional toast" "Will be removed when condition is false")
+
                 _ ->
                     ( model
                     , Cmd.none
@@ -134,8 +148,19 @@ update msg model =
             )
                 |> addToastIfUnique (Toasty.Defaults.Success "Unique toast" "Avoid repeated notifications")
 
+        BtnClicked "conditional" ->
+            ( model
+            , Task.perform (\() -> ConditionFlipped) (Process.sleep 5000)
+            )
+                |> addConditionalToast (\m -> m.flag) (Toasty.Defaults.Success "Conditional toast" "Will be removed when condition is false")
+
         BtnClicked _ ->
             ( model
+            , Cmd.none
+            )
+
+        ConditionFlipped ->
+            ( { model | flag = not model.flag }
             , Cmd.none
             )
 
@@ -160,8 +185,10 @@ view model =
             , button [ class "btn error", type_ "button", onClick <| BtnClicked "error" ] [ text "error" ]
             , text ", "
             , button [ class "btn", type_ "button", onClick <| BtnClicked "persistent" ] [ text "persistent" ]
-            , text " or "
+            , text ", "
             , button [ class "btn", type_ "button", onClick <| BtnClicked "unique" ] [ text "unique" ]
+            , text " or "
+            , button [ class "btn", type_ "button", onClick <| BtnClicked "conditional" ] [ text "conditional" ]
             , text " toast."
             ]
         , p []
@@ -173,9 +200,11 @@ view model =
             , kbd [] [ text "[e]" ]
             , text " for error, "
             , kbd [] [ text "[p]" ]
-            , text " for persistent or "
+            , text " for persistent, "
             , kbd [] [ text "[u]" ]
-            , text " for unique toasts."
+            , text " for unique or "
+            , kbd [] [ text "[c]" ]
+            , text " for conditional toasts."
             ]
         , p [ class "help small" ] [ text "Click on any toast to remove it." ]
         , p [] [ text "This demo uses ", code [] [ text "Toasty.Defaults" ], text " for styling." ]
